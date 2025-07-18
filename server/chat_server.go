@@ -100,6 +100,15 @@ func pollSelections(room *Room, conn net.Conn, wg *sync.WaitGroup) {
 			break
 		}
 		time.Sleep(2 * time.Second)
+		var missingVoter []string
+
+		for _, connection := range room.connections {
+			if !connection.hasSelected {
+				missingVoter = append(missingVoter, connection.nickname)
+			}
+		}
+
+		fmt.Fprintln(conn, "Missing voters: "+strings.Join(missingVoter, ","))
 	}
 }
 
