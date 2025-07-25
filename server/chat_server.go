@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"rooms/shared"
@@ -105,20 +106,45 @@ func sendVoteResults(room *Room, conn net.Conn) {
 
 func pollSelections(room *Room, conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go checkMissingVoters(room, conn, ctx)
+
 	for {
 		if allClientsSelected(room) {
+			// cancel()
 			break
 		}
 		time.Sleep(2 * time.Second)
-		var missingVoter []string
+	}
+}
 
-		for _, connection := range room.connections {
-			if !connection.hasSelected {
-				missingVoter = append(missingVoter, connection.nickname)
+func checkMissingVoters(room *Room, conn net.Conn, ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			var missingVoter []string
+
+			room.mutex.Lock()
+			for _, client := range room.connections {
+				if !client.hasSelected {
+					missingVoter = append(missingVoter, client.nickname)
+				}
+			}
+			room.mutex.Unlock()
+
+			if len(missingVoter) > 0 {
+				warningMsg := createMessage("warning", "Missing voters: "+strings.Join(missingVoter, ","))
+				sendMessage(conn, warningMsg)
 			}
 		}
-		warningMsg := createMessage("warning", "Missing voters: "+strings.Join(missingVoter, ","))
-		sendMessage(conn, warningMsg)
 	}
 }
 
