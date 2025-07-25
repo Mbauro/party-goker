@@ -28,7 +28,33 @@ go run ./client -host=<hostname>
 ```
 This command starts the client and connects it to the specified server host. Replace <hostname> with the address of the machine running the server (e.g., localhost or a remote IP).
 
-3. **Compiled Versions**
+> [!NOTE]
+For testing purposes, you can use the server with this IP to connect through the client:
+```bash
+go run ./client --host=34.228.81.179
+```
+
+3. **Start the App Using the Binaries**  
+You can use the pre-built binaries to run the application.  
+Download the appropriate binary for your operating system from the [Releases page](https://github.com/Mbauro/party-goker/releases).
+
+Choose the one based on your operating system, then run it:
+
+**For example, on macOS:**
+
+To start the **client**:
+
+```bash
+./party-goker-client-darwin-amd64 --host=<hostname>
+```
+
+To start the **server**:
+
+```bash
+./party-goker-srv-darwin-amd64
+```
+
+4. **Compile the binaries Versions**
 You can build executable binaries for both the server and client:
 
 ```bash
