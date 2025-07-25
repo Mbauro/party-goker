@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"rooms/shared"
 	"time"
 
 	"net"
@@ -42,13 +44,16 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
-	fmt.Fprintln(conn, "Welcome! Choose an option:\n1. Create a room\n2. Join an existing room")
+	firstMenu := createMessage("menu", "Welcome! Choose an option:\n1. Create a room\n2. Join an existing room")
+	sendMessage(conn, firstMenu)
+	// fmt.Fprintln(conn, "Welcome! Choose an option:\n1. Create a room\n2. Join an existing room")
 	option, _ := reader.ReadString('\n')
 	option = strings.TrimSpace(option)
 
 	room, err := getOrCreateRoom(option, conn, reader)
 	if err != nil {
-		fmt.Fprintln(conn, err)
+		errorMsg := createMessage("error", err.Error())
+		sendMessage(conn, errorMsg)
 		return
 	}
 
@@ -57,7 +62,8 @@ func handleConnection(conn net.Conn) {
 	registerClient(room, conn, reader)
 
 	for {
-		fmt.Fprintln(conn, "Choose:\n1. Vote\n2. Exit")
+		mainMenu := createMessage("menu", "Choose:\n1. Vote\n2. Exit")
+		sendMessage(conn, mainMenu)
 		choice, err := reader.ReadString('\n')
 		if err != nil {
 			return
@@ -70,15 +76,18 @@ func handleConnection(conn net.Conn) {
 			room.wg.Add(1)
 			go pollSelections(room, conn, &room.wg)
 			room.wg.Wait()
-			fmt.Fprintln(conn, "Everyone has voted")
+			successMsg := createMessage("success", "Everyone has voted")
+			sendMessage(conn, successMsg)
 			sendVoteResults(room, conn)
 			resetSelections(room)
 		case "2":
 			unregisterClient(room, conn)
-			fmt.Fprintln(conn, "You have left the room.")
+			warningMsg := createMessage("warning", "You have left the room.")
+			sendMessage(conn, warningMsg)
 			return
 		default:
-			fmt.Fprintln(conn, "Invalid option.")
+			warningMsg := createMessage("warning", "Invalid option.")
+			sendMessage(conn, warningMsg)
 		}
 	}
 }
@@ -90,7 +99,8 @@ func sendVoteResults(room *Room, conn net.Conn) {
 		output += conn.nickname + " has voted " + conn.choice + "\n"
 	}
 
-	fmt.Fprintln(conn, output)
+	infoMsg := createMessage("info", output)
+	sendMessage(conn, infoMsg)
 }
 
 func pollSelections(room *Room, conn net.Conn, wg *sync.WaitGroup) {
@@ -107,8 +117,8 @@ func pollSelections(room *Room, conn net.Conn, wg *sync.WaitGroup) {
 				missingVoter = append(missingVoter, connection.nickname)
 			}
 		}
-
-		fmt.Fprintln(conn, "Missing voters: "+strings.Join(missingVoter, ","))
+		warningMsg := createMessage("warning", "Missing voters: "+strings.Join(missingVoter, ","))
+		sendMessage(conn, warningMsg)
 	}
 }
 
@@ -119,11 +129,13 @@ func getOrCreateRoom(option string, conn net.Conn, reader *bufio.Reader) (*Room,
 		id := uuid.New().String()
 		room := &Room{connections: make(map[net.Conn]*Client), wg: sync.WaitGroup{}}
 		rooms[id] = room
-		fmt.Fprintln(conn, "Room created. Your room UUID:", id)
+		successMsg := createMessage("success", "Room created. Your room UUID:"+id)
+		sendMessage(conn, successMsg)
 		return room, nil
 
 	case "2":
-		fmt.Fprintln(conn, "Enter your room UUID:")
+		infoMsg := createMessage("info", "Enter your room UUID:")
+		sendMessage(conn, infoMsg)
 		roomID, _ := reader.ReadString('\n')
 		roomID = strings.TrimSpace(roomID)
 
@@ -143,7 +155,8 @@ func getOrCreateRoom(option string, conn net.Conn, reader *bufio.Reader) (*Room,
 }
 
 func registerClient(room *Room, conn net.Conn, reader *bufio.Reader) {
-	fmt.Fprintln(conn, "Enter your nickname: ")
+	infoMsg := createMessage("info", "Enter your nickname: ")
+	sendMessage(conn, infoMsg)
 	nickname, _ := reader.ReadString('\n')
 	nickname = strings.TrimSpace(nickname)
 	room.connections[conn] = &Client{isConnected: true, nickname: nickname}
@@ -161,7 +174,8 @@ func handleVoting(room *Room, conn net.Conn, reader *bufio.Reader) error {
 
 	var vote string
 	for {
-		fmt.Fprintln(conn, "Select a number among: "+strings.Join(fibonacci, ", "))
+		infoMsg := createMessage("info", "Select a number among: "+strings.Join(fibonacci, ", "))
+		sendMessage(conn, infoMsg)
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			return err
@@ -173,7 +187,8 @@ func handleVoting(room *Room, conn net.Conn, reader *bufio.Reader) error {
 			room.connections[conn].choice = vote
 			break
 		}
-		fmt.Fprintln(conn, "Invalid choice.")
+		errorMsg := createMessage("error", "Invalid choice.")
+		sendMessage(conn, errorMsg)
 	}
 
 	return nil
@@ -215,4 +230,17 @@ func broadcast(room *Room, sender net.Conn, message string) {
 			fmt.Fprintln(conn, message)
 		}
 	}
+}
+
+func createMessage(msgType string, data string) shared.Message {
+	return shared.Message{
+		Type: msgType,
+		Data: data,
+	}
+}
+
+func sendMessage(conn net.Conn, message shared.Message) {
+	msgBytes, _ := json.Marshal(message)
+
+	fmt.Fprintln(conn, string(msgBytes))
 }
