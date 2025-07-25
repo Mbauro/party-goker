@@ -114,7 +114,6 @@ func pollSelections(room *Room, conn net.Conn, wg *sync.WaitGroup) {
 
 	for {
 		if allClientsSelected(room) {
-			// cancel()
 			break
 		}
 		time.Sleep(2 * time.Second)
