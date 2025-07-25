@@ -2,10 +2,14 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
 	"os"
+	"rooms/shared"
+
+	"github.com/fatih/color"
 )
 
 func main() {
@@ -33,7 +37,10 @@ func main() {
 				fmt.Println("Disconnected from server.")
 				os.Exit(0)
 			}
-			fmt.Print(msg)
+			jsonMsg := shared.Message{}
+			json.Unmarshal([]byte(msg), &jsonMsg)
+			printMessage(jsonMsg)
+			//fmt.Print(msg)
 		}
 	}()
 
@@ -41,4 +48,22 @@ func main() {
 	for scanner.Scan() {
 		fmt.Fprintln(conn, scanner.Text())
 	}
+}
+
+func printMessage(jsonMsg shared.Message) {
+	switch jsonMsg.Type {
+	case "menu":
+		color.HiCyan(jsonMsg.Data)
+	case "error":
+		color.HiRed(jsonMsg.Data)
+	case "info":
+		color.HiMagenta(jsonMsg.Data)
+	case "success":
+		color.HiGreen(jsonMsg.Data)
+	case "warning":
+		color.HiYellow(jsonMsg.Data)
+	default:
+		color.White(jsonMsg.Data)
+	}
+
 }
