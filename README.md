@@ -2,6 +2,10 @@
 
 A lightweight **Scrum Planning Poker server** built in **Go**, using **CLI-only** interface. This tool allows team members to create or join rooms and vote using Fibonacci-style estimates in real-time.
 
+
+https://github.com/user-attachments/assets/6ba56e2f-9e8e-4542-8267-0be53ad75306
+
+
 ---
 
 ## 🚀 Features
