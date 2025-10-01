@@ -32,11 +32,6 @@ go run ./client -host=<hostname>
 ```
 This command starts the client and connects it to the specified server host. Replace <hostname> with the address of the machine running the server (e.g., localhost or a remote IP).
 
-> [!NOTE]
-For testing purposes, you can use the server with this IP to connect through the client:
-```bash
-go run ./client --host=34.228.81.179
-```
 
 3. **Start the App Using the Binaries**  
 You can use the pre-built binaries to run the application.  
